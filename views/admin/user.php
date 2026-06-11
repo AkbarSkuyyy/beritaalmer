@@ -48,16 +48,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['tambah_user'])) {
 if (isset($_GET['hapus'])) {
     $id_hapus = (int)$_GET['hapus'];
     
-    // PROTEKSI: Mencegah admin menghapus akunnya sendiri yang sedang aktif
+    // PROTEKSI 1: Mencegah admin menghapus akunnya sendiri yang sedang aktif
     if ($id_hapus === (int)$_SESSION['admin_id']) {
         $error = "Akses Ditolak: Anda tidak dapat menghapus akun Anda sendiri saat sedang login!";
     } else {
         try {
-            // Opsional: Jika user ini pernah menulis berita, ID penulis di tabel berita akan diubah menjadi NULL 
-            // (tergantung konstrain ON DELETE SET NULL di tabel berita Anda)
-            $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
-            $stmt->execute([$id_hapus]);
-            $success = "Akun pengguna berhasil dihapus permanen!";
+            // PROTEKSI 2: Mencegah penghapusan akun berstatus Super Admin
+            $stmt_cek_role = $pdo->prepare("SELECT role FROM users WHERE id = ?");
+            $stmt_cek_role->execute([$id_hapus]);
+            $user_target = $stmt_cek_role->fetch();
+
+            if ($user_target && $user_target['role'] === 'superadmin') {
+                $error = "Akses Ditolak: Akun dengan hak akses Super Admin tidak boleh dihapus!";
+            } else {
+                // Eksekusi penghapusan jika bukan Super Admin
+                $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+                $stmt->execute([$id_hapus]);
+                $success = "Akun pengguna berhasil dihapus permanen!";
+            }
         } catch (PDOException $e) {
             $error = "Gagal menghapus! Pastikan pengguna ini tidak memiliki keterkaitan krusial di database.";
         }
@@ -82,12 +90,13 @@ try {
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Inter', sans-serif; background-color: #f4f4f5; color: #1c1917; display: flex; min-height: 100vh; }
         
-        /* Sidebar Menu (Dipertahankan untuk styling file sidebar.php) */
+        /* Sidebar Menu CSS DIKEMBALIKAN AGAR TIDAK BERANTAKAN */
         .admin-sidebar { width: 260px; background-color: #18181b; color: #ffffff; padding: 25px 15px; display: flex; flex-direction: column; position: fixed; height: 100vh; z-index: 100; }
         .admin-logo { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 35px; padding-left: 10px; }
         .admin-logo span { color: #ff6b00; }
@@ -129,6 +138,7 @@ try {
         .admin-table tr:hover { background-color: #fafafa; }
         
         .badge-role { padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; display: inline-block; text-transform: uppercase; letter-spacing: 0.5px;}
+        .role-superadmin { background: #f3e8ff; color: #7c3aed; }
         .role-admin { background: #fef2f2; color: #ef4444; }
         .role-user { background: #e0f2fe; color: #0ea5e9; }
         
@@ -212,7 +222,14 @@ try {
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="badge-role <?= $usr['role'] == 'admin' ? 'role-admin' : 'role-user' ?>">
+                                        <?php 
+                                            // Menentukan warna badge sesuai role
+                                            $role_class = 'role-user';
+                                            if ($usr['role'] == 'admin') $role_class = 'role-admin';
+                                            if ($usr['role'] == 'superadmin') $role_class = 'role-superadmin';
+                                        ?>
+                                        <span class="badge-role <?= $role_class ?>">
+                                            <?php if($usr['role'] == 'superadmin') echo '<i class="fa-solid fa-crown" style="margin-right:4px;"></i>'; ?>
                                             <?= htmlspecialchars($usr['role']) ?>
                                         </span>
                                     </td>
@@ -222,6 +239,8 @@ try {
                                     <td style="text-align: center;">
                                         <?php if($usr['id'] == $_SESSION['admin_id']): ?>
                                             <span style="font-size: 11px; font-weight: 600; color: #10b981; background: #d1fae5; padding: 4px 8px; border-radius: 4px;">ANDA</span>
+                                        <?php elseif($usr['role'] == 'superadmin'): ?>
+                                            <span style="font-size: 11px; font-weight: 600; color: #64748b; background: #f1f5f9; padding: 4px 8px; border-radius: 4px;"><i class="fa-solid fa-lock"></i> KUNCI</span>
                                         <?php else: ?>
                                             <a href="?hapus=<?= $usr['id'] ?>" class="btn-action delete" title="Hapus Pengguna" onclick="return confirm('PERHATIAN: Yakin ingin menghapus pengguna ini? Tindakan ini tidak bisa dibatalkan!')"><i class="fa-solid fa-trash"></i></a>
                                         <?php endif; ?>

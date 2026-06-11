@@ -23,6 +23,25 @@ try {
     die("Sistem Keamanan Gagal: " . $e->getMessage());
 }
 
+// ------------------------------------------------------------------------
+// FITUR MAGIC VIEW: Manipulasi Tayangan secara AJAX (Super Admin Only)
+// ------------------------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'update_views_ajax') {
+    $id_berita = (int)$_POST['id'];
+    $views_baru = (int)$_POST['views'];
+    
+    try {
+        $stmt_update = $pdo->prepare("UPDATE berita SET views = ? WHERE id = ?");
+        $stmt_update->execute([$views_baru, $id_berita]);
+        
+        echo json_encode(['status' => 'success']);
+        exit;
+    } catch (PDOException $e) {
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+
 $error = '';
 $success = '';
 
@@ -161,8 +180,8 @@ try {
         .news-meta { font-size: 12px; color: #64748b; }
         .badge-cat { background: #fff7ed; color: #ea580c; border: 1px solid #ffedd5; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
 
-        /* Tombol Aksi */
-        .action-flex { display: flex; gap: 8px; }
+        /* Tombol Aksi & Manipulasi */
+        .action-flex { display: flex; gap: 8px; justify-content: center;}
         .btn-act { width: 35px; height: 35px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; text-decoration: none; font-size: 14px; transition: 0.2s; }
         .btn-act.view { background: #f0f9ff; color: #0ea5e9; border: 1px solid #bae6fd; }
         .btn-act.view:hover { background: #0ea5e9; color: #fff; }
@@ -170,6 +189,9 @@ try {
         .btn-act.edit:hover { background: #7c3aed; color: #fff; }
         .btn-act.delete { background: #fef2f2; color: #ef4444; border: 1px solid #fca5a5; }
         .btn-act.delete:hover { background: #ef4444; color: #fff; }
+
+        .btn-magic { background: #fdf4ff; color: #c026d3; border: 1px solid #f5d0fe; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
+        .btn-magic:hover { background: #c026d3; color: #fff; }
 
         /* Paginasi Modern */
         .pagination-box { padding: 25px; border-top: 1px solid #f1f5f9; display: flex; justify-content: center; gap: 8px; }
@@ -257,10 +279,10 @@ try {
                     <thead>
                         <tr>
                             <th style="width: 8%;">Sampul</th>
-                            <th style="width: 35%;">Detail Berita</th>
+                            <th style="width: 32%;">Detail Berita</th>
                             <th style="width: 15%;">Kategori</th>
                             <th style="width: 15%;">Penulis</th>
-                            <th style="width: 12%;">Statistik</th>
+                            <th style="width: 15%;">Statistik & Magic</th>
                             <th style="width: 15%; text-align: center;">Tindakan</th>
                         </tr>
                     </thead>
@@ -282,7 +304,13 @@ try {
                                 <td><span class="badge-cat"><?= htmlspecialchars($br['nama_kategori'] ?? 'Tanpa Kategori') ?></span></td>
                                 <td style="font-weight: 600; color: #334155;"><i class="fa-solid fa-user-pen" style="color:#cbd5e1; margin-right:5px;"></i><?= htmlspecialchars($br['penulis']) ?></td>
                                 <td>
-                                    <div style="font-weight: 700; color: #0ea5e9;"><i class="fa-solid fa-eye"></i> <?= number_format($br['views']) ?>x</div>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <div style="font-weight: 700; color: #0ea5e9;"><i class="fa-solid fa-eye"></i> <?= number_format($br['views']) ?>x</div>
+                                        
+                                        <button type="button" class="btn-magic" onclick="magicView(<?= $br['id'] ?>, <?= $br['views'] ?>, '<?= htmlspecialchars(addslashes($br['judul'])) ?>')" title="Manipulasi Jumlah Tayangan">
+                                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                        </button>
+                                    </div>
                                 </td>
                                 <td style="text-align: center;">
                                     <div class="action-flex">
@@ -341,4 +369,59 @@ try {
             reverseButtons: true
         }).then((result) => {
             if (result.isConfirmed) {
-                // Pertahankan query pencarian di
+                // Pertahankan query pencarian di URL saat ini
+                const urlParams = new URLSearchParams(window.location.search);
+                urlParams.set('hapus', id);
+                window.location.href = '?' + urlParams.toString();
+            }
+        });
+    }
+
+    // FITUR MAGIC VIEW: Manipulasi Tayangan Berita
+    function magicView(id, currentViews, judul) {
+        Swal.fire({
+            title: '<i class="fa-solid fa-wand-magic-sparkles" style="color:#c026d3;"></i> Magic View',
+            html: `Ubah total jumlah tayangan pada berita:<br><br><b style="font-size:14px; color:#334155;">${judul}</b>`,
+            input: 'number',
+            inputValue: currentViews,
+            inputAttributes: { min: 0 },
+            showCancelButton: true,
+            confirmButtonColor: '#c026d3',
+            cancelButtonColor: '#1e293b',
+            confirmButtonText: 'Terapkan Sihir',
+            cancelButtonText: 'Batal',
+            inputValidator: (value) => {
+                if (!value || value < 0) {
+                    return 'Sistem menolak! Angka tayangan tidak valid.';
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const newViews = result.value;
+                const formData = new FormData();
+                formData.append('action', 'update_views_ajax');
+                formData.append('id', id);
+                formData.append('views', newViews);
+
+                fetch('', { method: 'POST', body: formData })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.status === 'success') {
+                        Swal.fire({
+                            title: 'Sihir Berhasil!',
+                            text: 'Angka trafik pembaca telah dimanipulasi oleh Super Admin.',
+                            icon: 'success',
+                            confirmButtonColor: '#c026d3'
+                        }).then(() => {
+                            window.location.reload(); 
+                        });
+                    } else {
+                        Swal.fire('Error', data.message, 'error');
+                    }
+                });
+            }
+        });
+    }
+    </script>
+</body>
+</html>
