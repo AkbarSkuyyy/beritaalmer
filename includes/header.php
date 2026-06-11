@@ -7,12 +7,20 @@
     <title><?= isset($meta_title) ? $meta_title . ' | Berita Almer' : 'Berita Almer | Portal Berita Terpercaya' ?></title>
     
     <?php if(isset($meta_title)): ?>
+        <meta name="description" content="<?= $meta_desc ?>">
+        
+        <meta property="og:site_name" content="Berita Almer">
         <meta property="og:title" content="<?= $meta_title ?>">
         <meta property="og:description" content="<?= $meta_desc ?>">
-        <meta property="og:image" content="<?= $meta_image ?>">
+        <meta property="og:image" itemprop="image" content="<?= $meta_image ?>">
+        <meta property="og:image:secure_url" content="<?= $meta_image ?>">
         <meta property="og:url" content="<?= $meta_url ?>">
         <meta property="og:type" content="article">
+        
         <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="<?= $meta_title ?>">
+        <meta name="twitter:description" content="<?= $meta_desc ?>">
+        <meta name="twitter:image" content="<?= $meta_image ?>">
     <?php endif; ?>
     
     <link rel="stylesheet" href="/assets/css/style.css">

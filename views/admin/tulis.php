@@ -24,21 +24,26 @@ try {
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $judul       = trim($_POST['judul']);
     $kategori_id = $_POST['kategori_id'];
-    // Ambil konten HTML murni dari editor (tidak menggunakan strip_tags agar format dan gambar tidak hilang)
+    // Ambil konten HTML murni dari editor
     $konten      = trim($_POST['konten']);
     $penulis_id  = $_SESSION['admin_id'];
 
     if (!empty($judul) && !empty($kategori_id) && !empty($konten)) {
-        // Membuat slug otomatis dari judul menggunakan fungsi di config.php
+        // Membuat slug otomatis dari judul
         $slug = createSlug($judul);
         
-        // Konfigurasi awal untuk upload gambar utama (Thumbnail)
+        // PENCEGAH DUPLIKASI SLUG
+        $stmt_cek = $pdo->prepare("SELECT id FROM berita WHERE slug = ?");
+        $stmt_cek->execute([$slug]);
+        if ($stmt_cek->rowCount() > 0) {
+            $slug = $slug . '-' . rand(100, 999);
+        }
+        
         $nama_gambar = null;
         
         if (isset($_FILES['gambar']) && $_FILES['gambar']['error'] == 0) {
             $target_dir = __DIR__ . '/../../assets/uploads/';
             
-            // Buat folder otomatis jika folder uploads belum tersedia
             if (!is_dir($target_dir)) {
                 mkdir($target_dir, 0755, true);
             }
@@ -46,9 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $file_extension = pathinfo($_FILES['gambar']['name'], PATHINFO_EXTENSION);
             $allowed_ext    = ['jpg', 'jpeg', 'png', 'webp'];
 
-            // Validasi format file ekstensi gambar
             if (in_array(strtolower($file_extension), $allowed_ext)) {
-                // Memberikan nama unik acak agar tidak bentrok
                 $nama_gambar = time() . '_' . uniqid() . '.' . $file_extension;
                 $target_file = $target_dir . $nama_gambar;
 
@@ -58,17 +61,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             } else {
                 $error = "Format gambar utama salah! Hanya diperbolehkan format JPG, JPEG, PNG, dan WEBP.";
             }
+        } else {
+            $error = "Gambar sampul berita wajib diunggah!";
         }
 
-        // Jika validasi lolos dan tidak ada error, masukkan data ke database
         if (empty($error)) {
             try {
-                // PDO secara otomatis menangani escaping untuk HTML di dalam $konten dengan aman
                 $stmt_insert = $pdo->prepare("INSERT INTO berita (judul, slug, konten, gambar, kategori_id, penulis_id) VALUES (?, ?, ?, ?, ?, ?)");
                 $stmt_insert->execute([$judul, $slug, $konten, $nama_gambar, $kategori_id, $penulis_id]);
                 
                 $success = "Berita baru berhasil diterbitkan!";
-                $judul = $konten = ''; // Kosongkan form setelah sukses
+                $judul = $konten = ''; 
             } catch (PDOException $e) {
                 $error = "Gagal menyimpan berita ke database: " . $e->getMessage();
             }
@@ -88,14 +91,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js"></script>
 
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Inter', sans-serif; background-color: #f4f4f5; color: #1c1917; display: flex; min-height: 100vh; }
         
-        /* Sidebar Menu (Tetap dipertahankan untuk mewarnai sidebar.php) */
+        /* CSS SIDEBAR YANG SEMPAT HILANG (PENTING) */
         .admin-sidebar { width: 260px; background-color: #18181b; color: #ffffff; padding: 25px 15px; display: flex; flex-direction: column; position: fixed; height: 100vh; z-index: 100; }
         .admin-logo { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 35px; padding-left: 10px; }
         .admin-logo span { color: #ff6b00; }
@@ -107,12 +109,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .menu-divider { color: #52525b; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px 15px; }
         .admin-logout a { display: flex; align-items: center; gap: 12px; color: #ef4444; text-decoration: none; padding: 12px 15px; font-size: 14px; font-weight: 600; }
 
-        /* Area Konten Utama */
         .admin-main { margin-left: 260px; width: calc(100% - 260px); padding: 40px; }
         .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px; background: #fff; padding: 20px 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .admin-header h2 { font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 700; }
 
-        /* Card Form */
         .form-card { background: #ffffff; padding: 35px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .form-group { margin-bottom: 25px; }
         .form-group label { display: block; font-size: 14px; font-weight: 600; color: #3f3f46; margin-bottom: 8px; }
@@ -121,16 +121,38 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .form-control:focus { border-color: #ff6b00; }
         textarea.form-control { resize: vertical; min-height: 200px; }
         
-        /* Notifikasi */
+        /* Box untuk Preview Gambar */
+        .image-preview-box {
+            width: 100%;
+            max-width: 400px;
+            height: 220px;
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background-color: #f8fafc;
+            margin-top: 10px;
+        }
+        .image-preview-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none; 
+        }
+        .image-preview-text {
+            color: #94a3b8;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
         .alert { padding: 15px; border-radius: 6px; font-size: 14px; margin-bottom: 25px; font-weight: 500; }
         .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #ef4444; }
-        .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; }
 
-        /* Tombol */
         .btn-submit { background: #ff6b00; color: #ffffff; border: none; padding: 14px 28px; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.3s; display: inline-flex; align-items: center; gap: 8px; }
         .btn-submit:hover { background: #e05e00; }
         
-        /* Modifikasi z-index agar dialog editor tidak tertutup sidebar */
         .tox-tinymce { border-radius: 8px !important; border-color: #e4e4e7 !important; }
     </style>
 </head>
@@ -149,10 +171,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <div class="form-card">
             <?php if (!empty($error)): ?>
                 <div class="alert alert-error"><i class="fa-solid fa-circle-exclamation" style="margin-right:8px;"></i> <?= htmlspecialchars($error) ?></div>
-            <?php endif; ?>
-
-            <?php if (!empty($success)): ?>
-                <div class="alert alert-success"><i class="fa-solid fa-circle-check" style="margin-right:8px;"></i> <?= htmlspecialchars($success) ?></div>
             <?php endif; ?>
 
             <form action="" method="POST" enctype="multipart/form-data">
@@ -174,8 +192,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                 <div class="form-group">
                     <label for="gambar">Gambar Utama / Sampul Berita</label>
-                    <input type="file" name="gambar" id="gambar" class="form-control" accept="image/*">
-                    <small style="color:#71717a; display:block; margin-top:5px;">Ini adalah gambar yang akan muncul di halaman depan. Untuk gambar di dalam teks, gunakan tombol gambar pada editor di bawah.</small>
+                    <input type="file" name="gambar" id="gambar" class="form-control" accept="image/*" required onchange="previewImage(event)">
+                    <small style="color:#71717a; display:block; margin-top:5px;">Ini adalah gambar yang akan muncul di halaman depan (Thumbnail).</small>
+                    
+                    <div class="image-preview-box">
+                        <span class="image-preview-text" id="previewText"><i class="fa-regular fa-image" style="font-size: 30px; display:block; text-align:center; margin-bottom:5px;"></i> Preview Gambar</span>
+                        <img id="imgPreview" src="#" alt="Preview">
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -204,7 +227,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             image_title: true,
             automatic_uploads: true,
             file_picker_types: 'image',
-            // Konfigurasi sistem uploader lokal untuk memproses gambar sisipan secara Base64 (tanpa file terpisah)
             file_picker_callback: function (cb, value, meta) {
                 var input = document.createElement('input');
                 input.setAttribute('type', 'file');
@@ -219,8 +241,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         var base64 = reader.result.split(',')[1];
                         var blobInfo = blobCache.create(id, file, base64);
                         blobCache.add(blobInfo);
-
-                        // Memanggil callback agar gambar muncul seketika di editor
                         cb(blobInfo.blobUri(), { title: file.name });
                     };
                     reader.readAsDataURL(file);
@@ -229,6 +249,45 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             },
             content_style: 'body { font-family: Inter, sans-serif; font-size: 15px; color: #1c1917; line-height: 1.6; }'
         });
+
+        function previewImage(event) {
+            const input = event.target;
+            const previewImg = document.getElementById('imgPreview');
+            const previewText = document.getElementById('previewText');
+
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    previewImg.style.display = 'block';
+                    previewText.style.display = 'none';
+                }
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                previewImg.style.display = 'none';
+                previewText.style.display = 'block';
+            }
+        }
     </script>
+
+    <?php if (!empty($success)): ?>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                title: 'Berhasil Diterbitkan!',
+                text: '<?= htmlspecialchars($success) ?>',
+                icon: 'success',
+                confirmButtonColor: '#ff6b00',
+                confirmButtonText: '<i class="fa-solid fa-list"></i> Lihat Daftar Berita',
+                allowOutsideClick: false 
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '/admin/berita';
+                }
+            });
+        });
+    </script>
+    <?php endif; ?>
+
 </body>
 </html>

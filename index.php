@@ -81,6 +81,9 @@ switch ($request) {
     case '/admin/logs':
         require __DIR__ . '/views/admin/logs.php';
         break;
+    case '/admin/superadmin':
+        require __DIR__ . '/views/admin/superadmin/super_admin.php';
+        break;
 
     // Jika URL yang diketik/diklik tidak ada di daftar atas (Error 404)
     default:

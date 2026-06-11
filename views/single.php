@@ -36,25 +36,19 @@ try {
     die("Terjadi kesalahan sistem: " . $e->getMessage());
 }
 
-// --- SETUP META TAGS UNTUK WHATSAPP ---
-// Mendapatkan protokol (http/https) dan nama domain secara otomatis
-$protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
-$domain = $protocol . $_SERVER['HTTP_HOST'];
+// --- SETUP META TAGS UNTUK WHATSAPP (UPDATE ANTI-GAGAL) ---
+$domain = rtrim(BASE_URL, '/');
 
-// Menyiapkan variabel yang akan dibaca oleh header.php
 $meta_title = htmlspecialchars($berita['judul']);
-// Mengambil 150 karakter pertama dari konten sebagai deskripsi (tanpa tag HTML)
 $meta_desc  = htmlspecialchars(substr(strip_tags($berita['konten']), 0, 150)) . '...';
 $meta_url   = $domain . "/berita/" . htmlspecialchars($berita['slug']);
 
-// WhatsApp WAJIB menggunakan URL gambar lengkap (Absolute URL)
 if (!empty($berita['gambar'])) {
     $meta_image = $domain . "/assets/uploads/" . htmlspecialchars($berita['gambar']);
 } else {
-    // Gambar default jika berita tidak punya foto
     $meta_image = $domain . "/assets/img/logo-default.jpg"; 
 }
-// --------------------------------------
+// -----------------------------------------------------------
 
 // --- LOGIKA KADALUARSA "BERITA UTAMA" ---
 $tgl_buat = strtotime($berita['created_at']);
@@ -70,42 +64,59 @@ if ($kategori_aktif === 'Berita Utama' && $selisih_hari > 5) {
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<main style="max-width: 800px; margin: 40px auto; padding: 0 20px; font-family: 'Inter', sans-serif; color: #0f172a; line-height: 1.7;">
+<div class="content-wrapper" style="margin-top: 20px;">
     
-    <div style="font-size: 14px; color: #64748b; margin-bottom: 20px;">
-        <a href="/" style="color: #ff6b00; text-decoration: none; font-weight: 600;">Beranda</a> &raquo; <?= htmlspecialchars($kategori_aktif) ?>
-    </div>
-
-    <h1 style="font-family: 'Outfit', sans-serif; font-size: 40px; font-weight: 800; line-height: 1.2; margin-bottom: 25px; color: #0f172a;">
-        <?= htmlspecialchars($berita['judul']) ?>
-    </h1>
-
-    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 20px; font-size: 14px; color: #64748b; padding-bottom: 25px; border-bottom: 1px solid #e2e8f0; margin-bottom: 30px;">
-        <div style="display: flex; align-items: center; gap: 8px; font-weight: 500;">
-            <i class="fa-solid fa-user-pen" style="color:#ff6b00;"></i>
-            Oleh <strong><?= htmlspecialchars($berita['penulis']) ?></strong>
+    <div class="main-column" style="background: #ffffff; padding: 35px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+        
+        <div style="font-size: 14px; color: #64748b; margin-bottom: 20px;">
+            <a href="/" style="color: #ff6b00; text-decoration: none; font-weight: 600;">Beranda</a> &raquo; <?= htmlspecialchars($kategori_aktif) ?>
         </div>
-        <div style="display: flex; align-items: center; gap: 8px; font-weight: 500;">
-            <i class="fa-solid fa-calendar-days"></i>
-            <?= date('d M Y, H:i', strtotime($berita['created_at'])) ?> WIB
+
+        <h1 style="font-family: 'Outfit', sans-serif; font-size: 38px; font-weight: 800; line-height: 1.25; margin-bottom: 25px; color: #0f172a; letter-spacing: -0.5px;">
+            <?= htmlspecialchars($berita['judul']) ?>
+        </h1>
+
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 20px; font-size: 14px; color: #64748b; padding-bottom: 25px; border-bottom: 1px solid #e2e8f0; margin-bottom: 30px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-weight: 500;">
+                <i class="fa-solid fa-user-pen" style="color:#ff6b00;"></i>
+                Oleh <strong><?= htmlspecialchars($berita['penulis']) ?></strong>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; font-weight: 500;">
+                <i class="fa-solid fa-calendar-days"></i>
+                <?= date('d M Y, H:i', strtotime($berita['created_at'])) ?> WIB
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; font-weight: 500;">
+                <i class="fa-solid fa-eye"></i>
+                Dibaca <?= number_format($berita['views']) ?> kali
+            </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 8px; font-weight: 500;">
-            <i class="fa-solid fa-eye"></i>
-            Dibaca <?= number_format($berita['views']) ?> kali
+
+        <?php if (!empty($berita['gambar'])): ?>
+            <img src="/assets/uploads/<?= htmlspecialchars($berita['gambar']) ?>" alt="Sampul Berita" style="width: 100%; max-height: 480px; object-fit: cover; border-radius: 12px; margin-bottom: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);">
+        <?php endif; ?>
+
+        <article style="font-size: 17px; color: #334155; line-height: 1.8; font-family: 'Inter', sans-serif;">
+            <?= $berita['konten'] ?>
+        </article>
+
+        <div style="margin-top: 40px; padding-top: 25px; border-top: 1px solid #e2e8f0;">
+            <span style="display: block; margin-bottom: 12px; font-weight: 700; color: #0f172a; font-family: 'Outfit', sans-serif; font-size: 15px;">
+                <i class="fa-solid fa-share-nodes" style="color: #ff6b00; margin-right: 5px;"></i> Bagikan Berita Ini:
+            </span>
+            
+            <?php 
+            $teks_wa = $berita['judul'] . " \n\nBaca selengkapnya di: " . $meta_url;
+            $link_wa = "https://api.whatsapp.com/send?text=" . urlencode($teks_wa);
+            ?>
+            
+            <a href="<?= $link_wa ?>" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background-color: #25D366; color: white; padding: 10px 22px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                <i class="fa-brands fa-whatsapp" style="font-size: 18px;"></i> WhatsApp
+            </a>
         </div>
-    </div>
 
-    <?php if (!empty($berita['gambar'])): ?>
-        <img src="/assets/uploads/<?= htmlspecialchars($berita['gambar']) ?>" alt="Sampul Berita" style="width: 100%; max-height: 450px; object-fit: cover; border-radius: 12px; margin-bottom: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
-    <?php endif; ?>
+    </div> <?php require_once __DIR__ . '/../includes/sidebar.php'; ?>
 
-    <article style="font-size: 17px; color: #334155;">
-        <?= $berita['konten'] ?>
-    </article>
-
-</main>
-
-<?php
+</div> <?php
 // 2. MEMANGGIL FOOTER ASLI ANDA
 require_once __DIR__ . '/../includes/footer.php';
 ?>
