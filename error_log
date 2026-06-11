@@ -1,0 +1,12 @@
+[10-Jun-2026 01:40:52 UTC] PHP Warning:  include(includes/header.php): Failed to open stream: No such file or directory in /home/beritaal/public_html/views/home.php on line 1
+[10-Jun-2026 01:40:52 UTC] PHP Warning:  include(includes/header.php): Failed to open stream: No such file or directory in /home/beritaal/public_html/views/home.php on line 1
+[10-Jun-2026 01:40:52 UTC] PHP Warning:  include(): Failed opening 'includes/header.php' for inclusion (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/beritaal/public_html/views/home.php on line 1
+[10-Jun-2026 01:40:52 UTC] PHP Warning:  include(includes/footer.php): Failed to open stream: No such file or directory in /home/beritaal/public_html/views/home.php on line 28
+[10-Jun-2026 01:40:52 UTC] PHP Warning:  include(includes/footer.php): Failed to open stream: No such file or directory in /home/beritaal/public_html/views/home.php on line 28
+[10-Jun-2026 01:40:52 UTC] PHP Warning:  include(): Failed opening 'includes/footer.php' for inclusion (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/beritaal/public_html/views/home.php on line 28
+[10-Jun-2026 01:40:52 UTC] PHP Warning:  include(includes/header.php): Failed to open stream: No such file or directory in /home/beritaal/public_html/views/404.php on line 1
+[10-Jun-2026 01:40:52 UTC] PHP Warning:  include(includes/header.php): Failed to open stream: No such file or directory in /home/beritaal/public_html/views/404.php on line 1
+[10-Jun-2026 01:40:52 UTC] PHP Warning:  include(): Failed opening 'includes/header.php' for inclusion (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/beritaal/public_html/views/404.php on line 1
+[10-Jun-2026 01:40:52 UTC] PHP Warning:  include(includes/footer.php): Failed to open stream: No such file or directory in /home/beritaal/public_html/views/404.php on line 10
+[10-Jun-2026 01:40:52 UTC] PHP Warning:  include(includes/footer.php): Failed to open stream: No such file or directory in /home/beritaal/public_html/views/404.php on line 10
+[10-Jun-2026 01:40:52 UTC] PHP Warning:  include(): Failed opening 'includes/footer.php' for inclusion (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/beritaal/public_html/views/404.php on line 10

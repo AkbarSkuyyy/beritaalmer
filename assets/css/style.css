@@ -1,0 +1,574 @@
+/* =========================================
+   TEMA PORTAL BERITA ALMER - FULL STYLE
+========================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700;800;900&family=Outfit:wght@500;700;800&display=swap');
+
+:root {
+    --color-black: #121212;
+    --color-white: #ffffff;
+    --color-orange: #ff6b00;
+    --color-yellow: #ffc107;
+    --color-bg: #f4f4f5;
+    --color-border: #e0e0e0;
+    --color-text-muted: #71717a;
+}
+
+/* --- RESET DASAR --- */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background-color: var(--color-bg);
+    color: var(--color-black);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    width: 100%;
+}
+
+/* =========================================
+   LAPIS 1: TOP BAR
+========================================= */
+.top-bar {
+    background-color: var(--color-black);
+    color: var(--color-white);
+    font-size: 13px;
+    border-bottom: 2px solid var(--color-orange);
+}
+
+.top-bar-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 40px;
+}
+
+.date-now {
+    color: #a1a1aa;
+    font-weight: 500;
+}
+
+.top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.top-bar-right a {
+    color: #a1a1aa;
+    font-size: 14px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px; 
+    height: 28px;
+    border-radius: 50%;
+    background-color: transparent;
+    transition: all 0.3s ease;
+}
+
+.top-bar-right a:hover {
+    color: var(--color-black);
+    background-color: var(--color-yellow);
+    transform: translateY(-2px);
+}
+
+/* =========================================
+   LAPIS 2: NAVBAR UTAMA (MODERN)
+========================================= */
+.almer-navbar {
+    background-color: var(--color-white);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    width: 100%;
+}
+
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 70px;
+}
+
+.nav-logo {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--color-black);
+    text-decoration: none;
+    letter-spacing: -1px;
+}
+.nav-logo span {
+    color: var(--color-orange);
+}
+
+.nav-menu {
+    display: flex;
+    align-items: center;
+    list-style: none;
+    gap: 5px;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-menu li a {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.nav-menu li a:hover, 
+.nav-menu li a.active {
+    color: var(--color-orange);
+    background-color: #fff7ed;
+}
+
+.nav-extra {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-left: 15px;
+    padding-left: 15px;
+    border-left: 2px solid var(--color-border);
+}
+
+.btn-search-nav {
+    color: var(--color-text-muted) !important;
+    font-size: 16px !important;
+    padding: 5px !important;
+    background: transparent !important;
+}
+.btn-search-nav:hover { color: var(--color-orange) !important; }
+
+.btn-login-nav {
+    background-color: var(--color-black) !important;
+    color: var(--color-white) !important;
+    padding: 8px 20px !important;
+    border-radius: 20px !important;
+    font-size: 13px !important;
+    transition: 0.3s;
+}
+.btn-login-nav:hover {
+    background-color: var(--color-orange) !important;
+}
+
+.nav-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--color-black);
+    cursor: pointer;
+}
+
+/* =========================================
+   LAYOUT KOLOM GANDA (MAIN & SIDEBAR)
+========================================= */
+.main-content {
+    margin-top: 40px;
+    min-height: 50vh;
+}
+
+.content-wrapper {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+}
+
+.main-column {
+    flex: 1;
+    min-width: 0;
+}
+
+.sidebar-column {
+    width: 320px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 100px; 
+}
+
+/* =========================================
+   DESAIN WIDGET SIDEBAR MODERN
+========================================= */
+.sidebar-widget {
+    background: var(--color-white);
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    margin-bottom: 30px;
+    overflow: hidden;
+    border: 1px solid transparent;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.sidebar-widget:hover {
+    box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+    transform: translateY(-2px);
+}
+
+.widget-title {
+    background: transparent;
+    color: var(--color-black);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+    margin: 25px 25px 0 25px;
+    padding: 0 0 0 12px;
+    text-transform: uppercase;
+    letter-spacing: -0.5px;
+    border-left: 4px solid var(--color-orange);
+}
+
+.widget-content {
+    padding: 20px 25px 25px 25px;
+}
+
+.sidebar-news-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-news-list li {
+    display: flex;
+    gap: 15px;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 15px;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.sidebar-news-list li:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+
+.side-thumb {
+    width: 75px;
+    height: 75px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.side-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.sidebar-news-list li:hover .side-thumb img {
+    transform: scale(1.1);
+}
+
+.side-thumb-placeholder {
+    width: 100%;
+    height: 100%;
+    background: var(--color-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #a1a1aa;
+    font-size: 20px;
+}
+
+.side-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.sidebar-date {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.side-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-black);
+    text-decoration: none;
+    line-height: 1.4;
+    transition: color 0.2s;
+}
+
+.side-title:hover {
+    color: var(--color-orange);
+}
+
+.sidebar-category-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-category-list li {
+    margin-bottom: 10px;
+}
+
+.sidebar-category-list a {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--color-black);
+    text-decoration: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 15px;
+    border-radius: 6px;
+    background: #fafafa;
+    border: 1px solid var(--color-border);
+    transition: all 0.3s ease;
+}
+
+.sidebar-category-list a:hover {
+    background: var(--color-black);
+    color: var(--color-white);
+    border-color: var(--color-black);
+}
+
+.cat-count {
+    background: var(--color-yellow);
+    color: var(--color-black);
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-weight: 800;
+}
+
+/* =========================================
+   FOOTER MODERN & PREMIUM
+========================================= */
+.site-footer {
+    background-color: var(--color-black);
+    color: var(--color-white);
+    padding-top: 60px;
+    margin-top: 40px;
+}
+
+.footer-inner {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1.5fr; 
+    gap: 40px;
+    margin-bottom: 50px;
+}
+
+.footer-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.footer-logo {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--color-white);
+    text-decoration: none;
+    margin-bottom: 15px;
+    letter-spacing: -1px;
+}
+
+.footer-desc {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: #a1a1aa;
+    line-height: 1.8;
+    margin-bottom: 25px;
+}
+
+.footer-social {
+    display: flex;
+    gap: 15px;
+}
+
+.footer-social a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: #222222;
+    color: var(--color-white);
+    border-radius: 50%;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.footer-social a:hover {
+    background: var(--color-orange);
+    color: var(--color-black);
+    transform: translateY(-3px);
+}
+
+.footer-heading {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 16px;
+    color: var(--color-yellow);
+    text-transform: uppercase;
+    margin: 0 0 20px 0;
+    position: relative;
+    padding-bottom: 10px;
+}
+
+.footer-heading::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 40px;
+    height: 3px;
+    background: var(--color-orange);
+}
+
+.footer-links, .footer-contact {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-links li {
+    margin-bottom: 12px;
+}
+
+.footer-links a {
+    color: #a1a1aa;
+    text-decoration: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+
+.footer-links a:hover {
+    color: var(--color-orange);
+    transform: translateX(5px); 
+}
+
+.footer-contact li {
+    display: flex;
+    gap: 15px;
+    color: #a1a1aa;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.footer-contact i {
+    color: var(--color-orange);
+    font-size: 16px;
+    margin-top: 3px;
+}
+
+.footer-bottom {
+    background: #0a0a0a;
+    padding: 20px 0;
+    text-align: center;
+    border-top: 1px solid #222222;
+}
+
+.footer-bottom p {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: #71717a;
+}
+
+/* =========================================
+   RESPONSIVE (HP & TABLET)
+========================================= */
+@media (max-width: 992px) {
+    /* Layout berubah jadi tumpuk atas-bawah */
+    .content-wrapper {
+        flex-direction: column;
+    }
+    
+    .sidebar-column {
+        width: 100%; /* Sidebar memanjang penuh di HP */
+        position: static; /* Mematikan efek menempel (sticky) di HP */
+    }
+
+    /* Footer berubah dari 4 kolom menjadi 2 kolom */
+    .footer-inner {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    /* Top Bar disembunyikan agar rapi di HP */
+    .top-bar {
+        display: none;
+    }
+
+    /* Navbar interaktif untuk layar sentuh */
+    .nav-toggle {
+        display: block;
+    }
+
+    .nav-menu {
+        position: absolute;
+        top: 70px;
+        left: 0;
+        width: 100%;
+        background-color: var(--color-white);
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 20px;
+        box-shadow: 0 10px 10px rgba(0,0,0,0.05);
+        clip-path: polygon(0 0, 100% 0, 100% 0, 0 0); 
+        transition: clip-path 0.4s ease-in-out;
+    }
+
+    .nav-menu.active {
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); 
+    }
+
+    .nav-menu li {
+        width: 100%;
+    }
+
+    .nav-menu li a {
+        display: block;
+        width: 100%;
+        padding: 12px 15px;
+        border-bottom: 1px solid var(--color-bg);
+    }
+
+    .nav-extra {
+        margin-left: 0;
+        padding-left: 0;
+        border-left: none;
+        margin-top: 15px;
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    /* Footer berubah dari 2 kolom menjadi 1 kolom menyusun ke bawah */
+    .footer-inner {
+        grid-template-columns: 1fr;
+    }
+}

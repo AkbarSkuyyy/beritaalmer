@@ -1,0 +1,8 @@
+RewriteEngine On
+
+# Izinkan server membaca file/folder statis (seperti gambar dan CSS) secara langsung
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Arahkan sisanya ke index.php
+RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]

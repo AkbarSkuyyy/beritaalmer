@@ -1,0 +1,267 @@
+/* =========================================
+   DASHBOARD ADMIN - MINIMALIST & MODERN
+========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800&display=swap');
+
+:root {
+    --bg-main: #f4f4f5;
+    --sidebar-bg: #121212;
+    --card-bg: #ffffff;
+    --text-main: #27272a;
+    --border-color: #e4e4e7;
+    --accent-orange: #ff6b00;
+    --accent-yellow: #ffc107;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    display: flex;
+    min-height: 100vh;
+}
+
+h1, h2, h3, h4 {
+    font-family: 'Outfit', sans-serif;
+    color: #121212;
+}
+
+/* --- SIDEBAR KIRI --- */
+.admin-sidebar {
+    width: 260px;
+    background-color: var(--sidebar-bg);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    height: 100vh;
+    left: 0;
+    top: 0;
+    z-index: 100;
+}
+
+.admin-logo {
+    padding: 25px 20px;
+    border-bottom: 1px solid #27272a;
+}
+
+.admin-logo a {
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    color: #fff;
+    text-decoration: none;
+    letter-spacing: -0.5px;
+}
+
+.admin-logo span {
+    color: var(--accent-orange);
+}
+
+.admin-menu {
+    list-style: none;
+    padding: 20px 0;
+    flex-grow: 1;
+}
+
+.admin-menu li a {
+    display: flex;
+    align-items: center;
+    padding: 15px 25px;
+    color: #a1a1aa;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s;
+    border-left: 3px solid transparent;
+}
+
+.admin-menu li a i {
+    width: 25px;
+    font-size: 16px;
+}
+
+.admin-menu li a:hover,
+.admin-menu li a.active {
+    background-color: rgba(255, 107, 0, 0.1);
+    color: var(--accent-yellow);
+    border-left-color: var(--accent-orange);
+}
+
+.admin-logout {
+    padding: 20px;
+    border-top: 1px solid #27272a;
+}
+
+.admin-logout a {
+    color: #ef4444;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+.admin-logout a i {
+    margin-right: 10px;
+}
+
+/* --- KONTEN UTAMA KANAN --- */
+.admin-main {
+    flex-grow: 1;
+    margin-left: 260px; /* Memberi ruang untuk sidebar fixed */
+    padding: 0 40px 40px 40px;
+}
+
+.admin-header {
+    height: 80px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 30px;
+}
+
+.admin-header h2 {
+    font-size: 20px;
+}
+
+/* --- KARTU STATISTIK --- */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.stat-card {
+    background: var(--card-bg);
+    padding: 25px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    background: #fff8f3;
+    color: var(--accent-orange);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-right: 20px;
+}
+
+.stat-info h3 {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: #71717a;
+    font-weight: 500;
+    margin: 0 0 5px 0;
+}
+
+.stat-info p {
+    font-family: 'Outfit', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    margin: 0;
+    line-height: 1;
+}
+
+/* --- TABEL BERITA --- */
+.admin-panel {
+    background: var(--card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    overflow: hidden;
+}
+
+.panel-header {
+    padding: 20px 25px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.panel-header h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.btn-primary {
+    background: var(--accent-orange);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.3s;
+}
+
+.btn-primary:hover {
+    background: var(--sidebar-bg);
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-table th, .admin-table td {
+    padding: 15px 25px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+}
+
+.admin-table th {
+    background: #fafafa;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    color: #71717a;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+
+.badge-cat {
+    background: #fef3c7;
+    color: #d97706;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    color: #fff;
+    text-decoration: none;
+    margin-right: 5px;
+    font-size: 12px;
+}
+
+.btn-action.edit { background: #3b82f6; }
+.btn-action.delete { background: #ef4444; }
