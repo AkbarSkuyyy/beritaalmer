@@ -1,49 +1,56 @@
 <?php
-// Pastikan file config terpanggil, ini sangat aman berkat penggunaan require_once
-require_once __DIR__ . '/../config.php';
-global $pdo; // Memastikan koneksi database terbaca di dalam sistem Router
+// Mulai sesi
+session_start();
 
-// Jika admin sudah login sebelumnya, langsung arahkan ke dasbor
+require_once __DIR__ . '/../config.php';
+global $pdo;
+
+// Jika sudah login, langsung arahkan ke tempat yang seharusnya
 if (isset($_SESSION['admin_id'])) {
-    header("Location: /admin");
+    if (isset($_SESSION['role']) && $_SESSION['role'] === 'superadmin') {
+        header("Location: /admin/superadmin");
+    } else {
+        header("Location: /admin/dashboard");
+    }
     exit;
 }
 
 $error = '';
 
-// Jika tombol login ditekan (Form disubmit)
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
     $username = trim($_POST['username']);
     $password = $_POST['password'];
 
     if (!empty($username) && !empty($password)) {
         try {
-            // Mencari data user di database berdasarkan username
-            $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+            // Cari data pengguna di database berdasarkan username
+            $stmt = $pdo->prepare("SELECT id, username, password, role FROM users WHERE username = ?");
             $stmt->execute([$username]);
             $user = $stmt->fetch();
 
-            // Jika user ditemukan & password yang diketik cocok dengan password acak (hash) di database
+            // Verifikasi kecocokan password dengan hash yang ada di database
             if ($user && password_verify($password, $user['password'])) {
-                // Berhasil Login! Simpan data ke Sesi (Session)
+                
+                // Mendaftarkan identitas ke dalam Sesi (Session)
                 $_SESSION['admin_id'] = $user['id'];
                 $_SESSION['username'] = $user['username'];
-                $_SESSION['role']     = $user['role']; // Sesuai dengan kolom di tabel users kita
-                
-                // Panggil fungsi log
-                logActivity('LOGIN_SUCCESS', $user['id']);
-    
-                // Lemparkan ke halaman Dasbor Admin
-                header("Location: /admin");
+                $_SESSION['role']     = $user['role'];
+
+                // Pengalihan cerdas berdasarkan hak akses
+                if ($user['role'] === 'superadmin') {
+                    header("Location: /admin/superadmin");
+                } else {
+                    header("Location: /admin/dashboard");
+                }
                 exit;
             } else {
-                $error = "Username atau Password salah!";
+                $error = "Kredensial ditolak! Username atau kata sandi tidak valid.";
             }
         } catch (PDOException $e) {
-            $error = "Terjadi kesalahan sistem: " . $e->getMessage();
+            $error = "Terjadi gangguan pada database: " . $e->getMessage();
         }
     } else {
-        $error = "Harap isi semua kolom!";
+        $error = "Kolom username dan kata sandi wajib diisi!";
     }
 }
 ?>
@@ -53,158 +60,205 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Admin | Berita Almer</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Gerbang Akses | Berita Almer</title>
     
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            font-family: 'Inter', sans-serif;
-            background-color: #f4f4f5;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f8fafc; 
+            color: #0f172a; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
             min-height: 100vh;
         }
+
         .login-wrapper {
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             padding: 20px;
         }
+
         .login-card {
             background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            border-radius: 16px;
             padding: 40px;
-            border-top: 5px solid #ff6b00; /* Aksen Oren */
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);
+            border: 1px solid #f1f5f9;
         }
+
         .login-header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 35px;
         }
-        .login-logo {
-            font-family: 'Montserrat', sans-serif;
+
+        .brand-logo {
+            font-family: 'Outfit', sans-serif;
             font-size: 28px;
             font-weight: 900;
-            color: #121212;
+            color: #0f172a;
             text-decoration: none;
-            letter-spacing: -1px;
+            letter-spacing: -0.5px;
+            display: inline-block;
+            margin-bottom: 10px;
         }
-        .login-logo span { color: #ff6b00; }
-        .login-tagline {
-            font-size: 13px;
-            color: #71717a;
-            margin-top: 5px;
-            display: block;
+        
+        .brand-logo span { color: #ff6b00; }
+        
+        .login-subtitle {
+            font-size: 14px;
+            color: #64748b;
+            font-weight: 500;
         }
-        .form-group {
-            margin-bottom: 20px;
-        }
+
+        .form-group { margin-bottom: 22px; }
         .form-group label {
             display: block;
             font-size: 13px;
             font-weight: 600;
-            color: #27272a;
+            color: #334155;
             margin-bottom: 8px;
         }
-        .input-icon-wrap {
+
+        .input-icon-wrapper {
             position: relative;
         }
-        .input-icon-wrap i {
+
+        .input-icon-wrapper i {
             position: absolute;
-            left: 15px;
             top: 50%;
+            left: 15px;
             transform: translateY(-50%);
-            color: #a1a1aa;
+            color: #94a3b8;
+            font-size: 16px;
+            transition: color 0.3s;
         }
+
         .form-control {
             width: 100%;
-            padding: 12px 15px 12px 40px;
-            border: 2px solid #e4e4e7;
-            border-radius: 6px;
+            padding: 14px 15px 14px 45px; /* Padding kiri lebih besar untuk ikon */
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
             font-family: 'Inter', sans-serif;
             font-size: 14px;
             outline: none;
-            transition: border-color 0.3s;
+            transition: all 0.3s;
+            color: #0f172a;
         }
+
         .form-control:focus {
             border-color: #ff6b00;
+            box-shadow: 0 0 0 4px rgba(255,107,0,0.1);
         }
+
+        /* Saat input fokus, ikon di dalamnya ikut menyala */
+        .form-control:focus + i, 
+        .input-icon-wrapper:focus-within i {
+            color: #ff6b00;
+        }
+
         .btn-login {
             width: 100%;
-            background: #121212;
+            background: #0f172a;
             color: #ffffff;
             border: none;
-            padding: 14px;
-            border-radius: 6px;
+            padding: 15px;
+            border-radius: 8px;
             font-family: 'Inter', sans-serif;
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
             margin-top: 10px;
         }
+
         .btn-login:hover {
             background: #ff6b00;
+            box-shadow: 0 4px 12px rgba(255,107,0,0.3);
+            transform: translateY(-2px);
         }
-        .error-msg {
+
+        .alert-error {
             background: #fef2f2;
-            color: #ef4444;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            margin-bottom: 20px;
             border: 1px solid #fecaca;
-            text-align: center;
+            color: #ef4444;
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 25px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
+
         .back-link {
             display: block;
             text-align: center;
             margin-top: 25px;
-            color: #71717a;
-            text-decoration: none;
+            color: #64748b;
             font-size: 13px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
         }
-        .back-link:hover { color: #121212; }
+
+        .back-link:hover { color: #ff6b00; }
+
     </style>
 </head>
 <body>
 
-<div class="login-wrapper">
-    <div class="login-card">
-        <div class="login-header">
-            <a href="/" class="login-logo">BERITA<span>ALMER</span></a>
-            <span class="login-tagline">Sistem Manajemen Konten</span>
-        </div>
-
-        <?php if (!empty($error)): ?>
-            <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> <?= htmlspecialchars($error) ?></div>
-        <?php endif; ?>
-
-        <form action="" method="POST">
-            <div class="form-group">
-                <label>Username</label>
-                <div class="input-icon-wrap">
-                    <i class="fa-solid fa-user"></i>
-                    <input type="text" name="username" class="form-control" placeholder="Masukkan username" required autocomplete="off">
-                </div>
-            </div>
+    <div class="login-wrapper">
+        <div class="login-card">
             
-            <div class="form-group">
-                <label>Kata Sandi</label>
-                <div class="input-icon-wrap">
-                    <i class="fa-solid fa-lock"></i>
-                    <input type="password" name="password" class="form-control" placeholder="Masukkan kata sandi" required>
-                </div>
+            <div class="login-header">
+                <a href="/" class="brand-logo">BERITA<span>ALMER</span></a>
+                <p class="login-subtitle">Silakan masuk ke panel kontrol Anda</p>
             </div>
 
-            <button type="submit" class="btn-login">Login Akses <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left: 5px;"></i></button>
-        </form>
+            <?php if (!empty($error)): ?>
+                <div class="alert-error">
+                    <i class="fa-solid fa-triangle-exclamation"></i> <?= htmlspecialchars($error) ?>
+                </div>
+            <?php endif; ?>
+
+            <form action="" method="POST">
+                
+                <div class="form-group">
+                    <label for="username">Username Akses</label>
+                    <div class="input-icon-wrapper">
+                        <input type="text" name="username" id="username" class="form-control" placeholder="Ketik username Anda..." required autocomplete="off">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Kata Sandi</label>
+                    <div class="input-icon-wrapper">
+                        <input type="password" name="password" id="password" class="form-control" placeholder="Ketik kata sandi Anda..." required>
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                </div>
+
+                <button type="submit" name="login" class="btn-login">
+                    Otorisasi Masuk <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                </button>
+
+            </form>
+
+            <a href="/" class="back-link"><i class="fa-solid fa-arrow-left"></i> Kembali ke Beranda Publik</a>
+
+        </div>
     </div>
-    <a href="/" class="back-link"><i class="fa-solid fa-arrow-left"></i> Kembali ke Beranda Publik</a>
-</div>
 
 </body>
 </html>
