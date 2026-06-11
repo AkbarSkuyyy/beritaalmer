@@ -29,6 +29,7 @@ $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         <li><a href="/admin/superadmin/dashboard" class="<?= ($uri == '/admin/superadmin/dashboard') ? 'active' : '' ?>"><i class="fa-solid fa-chart-pie"></i> Ringkasan Dasbor</a></li>
         <li><a href="/admin/superadmin/grafik" class="<?= ($uri == '/admin/superadmin/grafik') ? 'active' : '' ?>"><i class="fa-solid fa-chart-line"></i> Grafik & Tren Trafik</a></li>
         <li><a href="/admin/superadmin/perkembangan" class="<?= ($uri == '/admin/superadmin/perkembangan') ? 'active' : '' ?>"><i class="fa-solid fa-seedling"></i> Metrik Perkembangan</a></li>
+        <li><a href="/admin/superadmin/logs" class="<?= ($uri == '/admin/superadmin/logs') ? 'active' : '' ?>"><i class="fa-solid fa-radar"></i> Log Audit IP</a></li>
         
         <div class="super-menu-divider">Manajemen Konten</div>
         <li><a href="/admin/superadmin/tulis" class="<?= ($uri == '/admin/superadmin/tulis') ? 'active' : '' ?>"><i class="fa-solid fa-pen-nib"></i> Tulis Berita Baru</a></li>

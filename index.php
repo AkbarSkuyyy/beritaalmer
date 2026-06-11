@@ -84,6 +84,35 @@ switch ($request) {
     case '/admin/superadmin':
         require __DIR__ . '/views/admin/superadmin/super_admin.php';
         break;
+    case '/admin/superadmin/tambah':
+        require __DIR__ . '/views/admin/superadmin/tambah_akun.php';
+        break;
+    case '/admin/superadmin/dashboard':
+        require __DIR__ . '/views/admin/superadmin/dashboard.php';
+        break;
+    case '/admin/superadmin/grafik':
+        require __DIR__ . '/views/admin/superadmin/grafik.php';
+        break;
+    case '/admin/superadmin/perkembangan':
+        require __DIR__ . '/views/admin/superadmin/perkembangan.php';
+        break;
+    case '/admin/superadmin/tulis':
+        require __DIR__ . '/views/admin/superadmin/tulis_berita.php';
+        break;
+    case '/admin/superadmin/berita':
+        require __DIR__ . '/views/admin/superadmin/kelola_berita.php';
+        break;
+    case '/admin/superadmin/kategori':
+        require __DIR__ . '/views/admin/superadmin/kelola_kategori.php';
+        break;
+    case '/admin/superadmin/setting':
+        require __DIR__ . '/views/admin/superadmin/setting_portal.php';
+        break;
+        
+    // Rute Log Audit IP Super Admin
+    case '/admin/superadmin/logs':
+        require __DIR__ . '/views/admin/superadmin/logs.php';
+        break;
 
     // Jika URL yang diketik/diklik tidak ada di daftar atas (Error 404)
     default:
