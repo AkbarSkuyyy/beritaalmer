@@ -1,187 +1,71 @@
 <?php
-// Mendeteksi URL saat ini agar menu yang aktif otomatis menyala
-$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+// Pastikan $pdo sudah tersedia (jika file ini dipanggil dari home.php/single.php, variabel ini sudah ada)
+global $pdo;
+
+// 1. Ambil data berita terbaru
+$sidebar_stmt = $pdo->query("SELECT slug, judul, created_at as tanggal, gambar FROM berita ORDER BY created_at DESC LIMIT 5");
+
+// 2. Ambil data kategori beserta jumlah berita di dalamnya
+$cat_stmt = $pdo->query("
+    SELECT k.nama_kategori, k.slug, COUNT(b.id) as total 
+    FROM kategori k 
+    LEFT JOIN berita b ON k.id = b.kategori_id 
+    GROUP BY k.id 
+    ORDER BY k.nama_kategori ASC
+");
 ?>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<button class="mobile-menu-btn" id="mobileMenuBtn">
-    <i class="fa-solid fa-bars"></i>
-</button>
-
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-<aside class="admin-sidebar" id="adminSidebar">
-    <div class="admin-logo">
-        <a href="/admin" style="color:white; text-decoration:none;">BERITA<span>ALMER</span></a>
-    </div>
-    <ul class="admin-menu">
-        <div class="menu-divider">Core</div>
-        <li><a href="/admin" class="<?= ($uri == '/admin' || $uri == '/admin/dashboard') ? 'active' : '' ?>"><i class="fa-solid fa-gauge-high"></i> Dashboard</a></li>
-        <li><a href="/admin/grafik" class="<?= ($uri == '/admin/grafik') ? 'active' : '' ?>"><i class="fa-solid fa-chart-line"></i> Grafik Analitik</a></li>
-        <li><a href="/admin/perkembangan" class="<?= ($uri == '/admin/perkembangan') ? 'active' : '' ?>"><i class="fa-solid fa-seedling"></i> Perkembangan</a></li>
-        
-        <div class="menu-divider">Konten</div>
-        <li><a href="/admin/tulis" class="<?= ($uri == '/admin/tulis') ? 'active' : '' ?>"><i class="fa-solid fa-pen-to-square"></i> Tulis Berita</a></li>
-        <li><a href="/admin/berita" class="<?= ($uri == '/admin/berita' || strpos($uri, '/admin/edit') === 0) ? 'active' : '' ?>"><i class="fa-solid fa-table-list"></i> Kelola Berita</a></li>
-        <li><a href="/admin/kategori" class="<?= ($uri == '/admin/kategori') ? 'active' : '' ?>"><i class="fa-solid fa-tags"></i> Kelola Kategori</a></li>
-        
-        <div class="menu-divider">Sistem</div>
-        <li><a href="/admin/users" class="<?= ($uri == '/admin/users' || $uri == '/admin/user') ? 'active' : '' ?>"><i class="fa-solid fa-users"></i> Manajemen Users</a></li>
-        <li><a href="/admin/logs" class="<?= ($uri == '/admin/logs') ? 'active' : '' ?>"><i class="fa-solid fa-shield-halved"></i> Audit Logs</a></li>
-        <li><a href="/admin/setting" class="<?= ($uri == '/admin/setting') ? 'active' : '' ?>"><i class="fa-solid fa-gear"></i> Pengaturan / Setting</a></li>
-        <li><a href="/" target="_blank"><i class="fa-solid fa-globe"></i> Lihat Website <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px;"></i></a></li>
-    </ul>
+<aside class="sidebar-column">
     
-    <div class="admin-logout">
-        <a href="#" id="tombolLogout"><i class="fa-solid fa-right-from-bracket"></i> Logout Sistem</a>
+    <div class="sidebar-widget">
+        <h3 class="widget-title"><i class="fa-solid fa-clock"></i> Berita Terbaru</h3>
+        <div class="widget-content">
+            <ul class="sidebar-news-list">
+                <?php while ($side_news = $sidebar_stmt->fetch()): ?>
+                    <li>
+                        <div class="side-thumb">
+                            <?php if (!empty($side_news['gambar'])): ?>
+                                <img src="/assets/uploads/<?= htmlspecialchars($side_news['gambar']) ?>" alt="Thumb">
+                            <?php else: ?>
+                                <div class="side-thumb-placeholder"><i class="fa-regular fa-image"></i></div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="side-info">
+                            <span class="sidebar-date"><?= date('d M Y', strtotime($side_news['tanggal'])) ?></span>
+                            <a href="/berita/<?= htmlspecialchars($side_news['slug']) ?>" class="side-title">
+                                <?= htmlspecialchars($side_news['judul']) ?>
+                            </a>
+                        </div>
+                    </li>
+                <?php endwhile; ?>
+            </ul>
+        </div>
     </div>
+
+    <div class="sidebar-widget">
+        <h3 class="widget-title"><i class="fa-solid fa-list-ul"></i> Kategori Berita</h3>
+        <div class="widget-content">
+            <ul class="sidebar-category-list">
+                <?php while ($cat = $cat_stmt->fetch()): ?>
+                    <li>
+                        <a href="/?kategori=<?= htmlspecialchars($cat['slug']) ?>">
+                            <?= htmlspecialchars($cat['nama_kategori']) ?> 
+                            <span class="cat-count"><?= $cat['total'] ?></span>
+                        </a>
+                    </li>
+                <?php endwhile; ?>
+            </ul>
+        </div>
+    </div>
+
+    <div class="sidebar-widget">
+        <h3 class="widget-title"><i class="fa-solid fa-bullhorn"></i> Sponsor</h3>
+        <div class="widget-content">
+            <div class="ad-space" style="background: #f8fafc; height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #a1a1aa; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; border-radius: 6px; border: 2px dashed #e2e8f0;">
+                <i class="fa-solid fa-rectangle-ad" style="font-size: 24px; margin-bottom: 10px; color: #d4d4d8;"></i>
+                SPACE IKLAN
+            </div>
+        </div>
+    </div>
+
 </aside>
-
-<style>
-/* ==============================================================
-   CSS RESPONSIF GLOBAL UNTUK SELURUH HALAMAN ADMIN
-============================================================== */
-
-/* Modifikasi tampilan tombol SweetAlert agar selaras dengan tema */
-div:where(.swal2-container) button:where(.swal2-styled).swal2-confirm {
-    background-color: #ff6b00 !important;
-    font-family: 'Outfit', sans-serif;
-    border-radius: 8px;
-}
-div:where(.swal2-container) button:where(.swal2-styled).swal2-cancel {
-    background-color: #18181b !important;
-    font-family: 'Outfit', sans-serif;
-    border-radius: 8px;
-}
-div:where(.swal2-container) h2:where(.swal2-title) {
-    font-family: 'Outfit', sans-serif;
-}
-div:where(.swal2-container) div:where(.swal2-html-container) {
-    font-family: 'Inter', sans-serif;
-    font-size: 15px;
-}
-
-.mobile-menu-btn {
-    display: none;
-    position: fixed;
-    bottom: 25px;
-    right: 25px;
-    background: #ff6b00;
-    color: #fff;
-    border: none;
-    width: 55px;
-    height: 55px;
-    border-radius: 50%;
-    font-size: 22px;
-    box-shadow: 0 4px 15px rgba(255,107,0,0.4);
-    z-index: 1001;
-    cursor: pointer;
-    transition: transform 0.3s;
-}
-.mobile-menu-btn:active { transform: scale(0.9); }
-
-.sidebar-overlay {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(2px);
-    z-index: 99;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-@media (max-width: 992px) {
-    .mobile-menu-btn { display: flex; align-items: center; justify-content: center; }
-    
-    .admin-sidebar {
-        transform: translateX(-100%);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        z-index: 1000;
-    }
-    
-    .admin-sidebar.show { transform: translateX(0); }
-    .sidebar-overlay.show { display: block; opacity: 1; }
-    
-    .admin-main {
-        margin-left: 0 !important;
-        width: 100% !important;
-        padding: 20px !important;
-    }
-    
-    .admin-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 15px;
-    }
-
-    .stats-grid, .dashboard-grid, .kategori-grid, .setting-grid, .charts-grid {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 20px !important;
-    }
-    
-    .search-form { width: 100% !important; }
-    .table-controls { flex-direction: column; gap: 15px; align-items: stretch; }
-    
-    .content-card, .admin-panel {
-        width: 100%;
-        overflow-x: auto;
-    }
-    .admin-table { min-width: 600px; }
-}
-</style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // 1. Logika untuk Menu Mobile
-    const btn = document.getElementById('mobileMenuBtn');
-    const sidebar = document.getElementById('adminSidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-
-    if(btn && sidebar && overlay) {
-        btn.addEventListener('click', function() {
-            sidebar.classList.toggle('show');
-            if (sidebar.classList.contains('show')) {
-                overlay.classList.add('show');
-                btn.querySelector('i').classList.replace('fa-bars', 'fa-xmark');
-            } else {
-                overlay.classList.remove('show');
-                btn.querySelector('i').classList.replace('fa-xmark', 'fa-bars');
-            }
-        });
-
-        overlay.addEventListener('click', function() {
-            sidebar.classList.remove('show');
-            overlay.classList.remove('show');
-            btn.querySelector('i').classList.replace('fa-xmark', 'fa-bars');
-        });
-    }
-
-    // 2. Logika ALERT Konfirmasi Logout (SweetAlert2)
-    const btnLogout = document.getElementById('tombolLogout');
-    if(btnLogout) {
-        btnLogout.addEventListener('click', function(e) {
-            e.preventDefault(); // Mencegah link langsung terbuka
-            
-            Swal.fire({
-                title: 'Yakin ingin keluar?',
-                text: "Sesi admin Anda akan diakhiri.",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#ff6b00', /* Warna Oren Khas Berita Almer */
-                cancelButtonColor: '#18181b',  /* Warna Hitam Gelap */
-                confirmButtonText: 'Ya, Logout!',
-                cancelButtonText: 'Batal',
-                reverseButtons: true /* Menukar posisi tombol agar "Batal" di kiri */
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Lanjutkan ke halaman logout jika ditekan Ya
-                    window.location.href = '/logout';
-                }
-            });
-        });
-    }
-});
-</script>

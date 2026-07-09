@@ -1,5 +1,5 @@
 <?php
-// 1. Panggil koneksi database (Mundur 3 tingkat ke root directory)
+// 1. Panggil koneksi database
 require_once __DIR__ . '/../../../config.php';
 global $pdo;
 
@@ -9,7 +9,7 @@ if (!isset($_SESSION['admin_id'])) {
     exit;
 }
 
-// 3. PROTEKSI KEAMANAN TERTINGGI: Cek Validitas Otoritas Role
+// 3. PROTEKSI KEAMANAN TERTINGGI: Cek Validitas Otoritas Role Superadmin
 try {
     $stmt_role = $pdo->prepare("SELECT role FROM users WHERE id = ?");
     $stmt_role->execute([$_SESSION['admin_id']]);
@@ -20,68 +20,73 @@ try {
         exit;
     }
 } catch (PDOException $e) {
-    die("Sistem Keamanan Gagal Memvalidasi Kredensial: " . $e->getMessage());
+    die("Sistem Keamanan Gagal: " . $e->getMessage());
 }
 
 $error = '';
 $success = '';
 
-// 4. Aksi Tambah Pengguna / Admin Baru
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['proses_tambah'])) {
-    $username = trim($_POST['username']);
-    $email    = trim($_POST['email']);
-    $password = $_POST['password'];
-    $role     = $_POST['role'];
-
-    if (!empty($username) && !empty($email) && !empty($password) && !empty($role)) {
+// 4. EKSEKUSI PENGHAPUSAN AKUN
+if (isset($_GET['hapus'])) {
+    $id_hapus = (int)$_GET['hapus'];
+    
+    // Fitur Keamanan: Mencegah Super Admin menghapus dirinya sendiri saat sedang login
+    if ($id_hapus === $_SESSION['admin_id']) {
+        $error = "Penolakan Akses: Anda tidak dapat memusnahkan akun Super Admin Anda sendiri yang sedang aktif digunakan!";
+    } else {
         try {
-            $cek = $pdo->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
-            $cek->execute([$username, $email]);
-
-            if ($cek->rowCount() > 0) {
-                $error = "Identitas Gagal: Username atau Email sudah terpakai di sistem cloud.";
+            // Cek apakah akun memiliki artikel berita (mencegah error foreign key jika ada)
+            $cek_berita = $pdo->prepare("SELECT id FROM berita WHERE penulis_id = ?");
+            $cek_berita->execute([$id_hapus]);
+            
+            if ($cek_berita->rowCount() > 0) {
+                $error = "Gagal: Akun ini tidak bisa dihapus karena masih menjadi pemilik dari beberapa artikel berita. Hapus atau pindahkan beritanya terlebih dahulu.";
             } else {
-                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                $stmt = $pdo->prepare("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$username, $email, $hashed_password, $role]);
-                $success = "Aktivasi Berhasil! Akun baru (" . strtoupper($role) . ") diaktifkan.";
+                $stmt_delete = $pdo->prepare("DELETE FROM users WHERE id = ?");
+                $stmt_delete->execute([$id_hapus]);
+                $success = "Akun berhasil dimusnahkan dari jaringan server.";
             }
         } catch (PDOException $e) {
-            $error = "Kesalahan Query DB: " . $e->getMessage();
-        }
-    } else {
-        $error = "Seluruh form isian mutlak wajib diisi!";
-    }
-}
-
-// 5. Aksi Penghapusan Akun Pengguna
-if (isset($_GET['hapus_id'])) {
-    $id_hapus = (int)$_GET['hapus_id'];
-
-    if ($id_hapus === (int)$_SESSION['admin_id']) {
-        $error = "Blokir Tindakan: Anda dilarang memusnahkan akun Superadmin Anda sendiri!";
-    } else {
-        try {
-            $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
-            $stmt->execute([$id_hapus]);
-            $success = "Data akun berhasil dihapus secara permanen dari server.";
-        } catch (PDOException $e) {
-            $error = "Gagal memutus relasi database: Akun terikat dengan artikel berita.";
+            $error = "Sistem gagal mengeksekusi penghapusan: " . $e->getMessage();
         }
     }
 }
 
-// 6. Mengambil Data Statistik Pengguna untuk Tampilan Dashboard Atas
-$count_super = $pdo->query("SELECT COUNT(id) FROM users WHERE role = 'superadmin'")->fetchColumn();
-$count_admin = $pdo->query("SELECT COUNT(id) FROM users WHERE role = 'admin'")->fetchColumn();
-$count_users = $pdo->query("SELECT COUNT(id) FROM users WHERE role = 'user'")->fetchColumn();
+// 5. SISTEM PENCARIAN & FILTER
+$search_query = $_GET['q'] ?? '';
+$filter_role = $_GET['role'] ?? '';
 
-// 7. Tarik Data Tabel Berdasarkan Hierarki Tingkatan Akses
+$where_clauses = [];
+$params = [];
+
+if (!empty($search_query)) {
+    $where_clauses[] = "(username LIKE ? OR email LIKE ?)";
+    $params[] = "%$search_query%";
+    $params[] = "%$search_query%";
+}
+if (!empty($filter_role)) {
+    $where_clauses[] = "role = ?";
+    $params[] = $filter_role;
+}
+
+$where_sql = count($where_clauses) > 0 ? "WHERE " . implode(" AND ", $where_clauses) : "";
+
+// 6. QUERY AMBIL SELURUH DAFTAR AKUN
 try {
-    $stmt_all = $pdo->query("SELECT id, username, email, role, created_at FROM users ORDER BY FIELD(role, 'superadmin', 'admin', 'user'), id DESC");
-    $daftar_pengguna = $stmt_all->fetchAll();
+    $query_users = "
+        SELECT id, username, email, role, created_at 
+        FROM users 
+        $where_sql 
+        ORDER BY FIELD(role, 'superadmin', 'admin', 'user'), created_at DESC
+    ";
+    $stmt_users = $pdo->prepare($query_users);
+    $stmt_users->execute($params);
+    $daftar_akun = $stmt_users->fetchAll();
+    
+    // Total akun setelah filter
+    $total_data = count($daftar_akun);
 } catch (PDOException $e) {
-    die("Gagal memuat arsitektur pengguna: " . $e->getMessage());
+    die("Terjadi kesalahan pembacaan database pengguna: " . $e->getMessage());
 }
 ?>
 
@@ -90,205 +95,211 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pusat Otoritas Tertinggi | Berita Almer</title>
+    <title>Pusat Daftar Akun | Super Admin</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; display: flex; min-height: 100vh; }
         
-        /* Area Kerja Sebelah Kanan (Mundur 280px untuk ruang sidebar) */
         .super-main-wrapper { margin-left: 280px; width: calc(100% - 280px); padding: 40px; transition: 0.3s; }
         
-        /* Header Banner Ungu Mewah */
         .master-banner { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); color: #fff; padding: 30px 40px; border-radius: 16px; margin-bottom: 35px; border-bottom: 4px solid #7c3aed; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
         .master-banner h2 { font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
-        .master-control-badge { background: rgba(124,58,237,0.2); border: 1px solid #a855f7; color: #c084fc; padding: 8px 16px; border-radius: 30px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; letter-spacing: 0.5px; }
+        .master-control-badge { background: rgba(124,58,237,0.2); border: 1px solid #a855f7; color: #c084fc; padding: 8px 16px; border-radius: 30px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
 
-        /* Kartu Penghitung Statistik Modern */
-        .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; margin-bottom: 35px; }
-        .stat-box { background: #fff; padding: 25px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; }
-        .stat-info h5 { font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
-        .stat-info h2 { font-family: 'Outfit', sans-serif; font-size: 32px; font-weight: 800; color: #0f172a; }
-        .stat-icon { width: 50px; height: 50px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
-        .icon-purple { background: #f3e8ff; color: #9333ea; }
-        .icon-red { background: #fee2e2; color: #ef4444; }
-        .icon-blue { background: #e0f2fe; color: #0ea5e9; }
+        /* Panel Filter */
+        .filter-panel { background: #ffffff; border-radius: 14px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; margin-bottom: 30px; }
+        .filter-grid { display: grid; grid-template-columns: 2fr 1fr auto auto; gap: 15px; align-items: end; }
+        .filter-group label { display: block; font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 8px; text-transform: uppercase; }
+        .filter-control { width: 100%; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; transition: 0.3s; color: #0f172a; }
+        .filter-control:focus { border-color: #7c3aed; }
+        .btn-filter { background: #0f172a; color: #fff; border: none; padding: 13px 20px; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.25s; height: 44px; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-filter:hover { background: #7c3aed; }
+        .btn-reset { background: #f1f5f9; color: #475569; border: none; padding: 13px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; height: 44px; transition: 0.2s; }
+        .btn-reset:hover { background: #e2e8f0; color: #0f172a; }
 
-        /* Arsitektur Kolom Ganda */
-        .master-grid { display: grid; grid-template-columns: 360px 1fr; gap: 30px; align-items: start; }
-        .panel-card { background: #ffffff; border-radius: 14px; padding: 30px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; }
-        .panel-title { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: #0f172a; padding-bottom: 15px; border-bottom: 1px solid #f1f5f9; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+        /* Panel Tabel */
+        .table-panel { background: #ffffff; border-radius: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; overflow: hidden; }
+        .table-header { padding: 20px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+        .table-title { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 10px; }
+        
+        .master-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        .master-table th { padding: 15px 25px; color: #64748b; font-weight: 600; border-bottom: 2px solid #e2e8f0; background-color: #f8fafc; font-family: 'Outfit', sans-serif; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .master-table td { padding: 18px 25px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .master-table tr:hover { background-color: #fafafa; }
+        
+        .user-identity { display: flex; align-items: center; gap: 12px; }
+        .user-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #fff; background: #cbd5e1; }
+        .user-name { font-weight: 700; color: #0f172a; margin-bottom: 2px; }
+        .user-email { font-size: 12px; color: #64748b; }
+        
+        /* Tema Badge Role */
+        .badge-role { padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px; }
+        .badge-super { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+        .badge-admin { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
+        .badge-user { background: #f0f9ff; color: #0ea5e9; border: 1px solid #bae6fd; }
 
-        /* Form Elemen Minimalis */
-        .input-block { margin-bottom: 20px; }
-        .input-block label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 8px; }
-        .field-box { width: 100%; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; transition: all 0.3s; color: #0f172a; }
-        .field-box:focus { border-color: #7c3aed; box-shadow: 0 0 0 4px rgba(124,58,237,0.1); }
-        .master-btn { width: 100%; background: #0f172a; color: #fff; border: none; padding: 14px; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.25s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .master-btn:hover { background: #7c3aed; box-shadow: 0 4px 12px rgba(124,58,237,0.3); }
+        .btn-act { width: 35px; height: 35px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; text-decoration: none; font-size: 14px; transition: 0.2s; border: none; cursor: pointer; }
+        .btn-act.delete { background: #fef2f2; color: #ef4444; border: 1px solid #fca5a5; }
+        .btn-act.delete:hover { background: #ef4444; color: #fff; }
+        .btn-act.disabled { opacity: 0.4; cursor: not-allowed; background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; }
 
-        /* Notifikasi Standar */
         .toast-msg { padding: 14px 18px; border-radius: 8px; font-size: 14px; font-weight: 500; margin-bottom: 25px; display: flex; align-items: center; gap: 10px; }
         .toast-err { background: #fef2f2; border: 1px solid #fecaca; color: #ef4444; }
         .toast-succ { background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; }
 
-        /* Desain Tabel Premium */
-        .master-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
-        .master-table th { padding: 16px 12px; color: #64748b; font-weight: 600; border-bottom: 2px solid #e2e8f0; background-color: #f8fafc; font-family: 'Outfit', sans-serif; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
-        .master-table td { padding: 18px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-        .master-table tr:hover { background-color: #fafafa; }
-        
-        /* Pewarnaan Badge Kategori Hak Akses */
-        .tag-role { padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-block; text-transform: uppercase; letter-spacing: 0.5px; font-family: 'Outfit', sans-serif; }
-        .tag-super { background: #f3e8ff; color: #7c3aed; border: 1px solid #d8b4fe; }
-        .tag-admin { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }
-        .tag-user { background: #e0f2fe; color: #0ea5e9; border: 1px solid #bae6fd; }
-        
-        .trash-circle-btn { color: #64748b; font-size: 14px; text-decoration: none; transition: 0.2s; display: inline-flex; width: 34px; height: 34px; background: #f1f5f9; align-items: center; justify-content: center; border-radius: 50%; }
-        .trash-circle-btn:hover { color: #fff; background: #ef4444; }
-
-        @media (max-width: 1200px) { .master-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 1200px) { .filter-grid { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 992px) {
+            .super-main-wrapper { margin-left: 0; width: 100%; padding: 20px; }
+            .master-banner { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .filter-grid { grid-template-columns: 1fr; }
+            .btn-filter, .btn-reset { width: 100%; justify-content: center; }
+            .table-responsive { overflow-x: auto; }
+            .master-table { min-width: 700px; }
+        }
     </style>
 </head>
 <body>
 
     <?php require_once __DIR__ . '/sidebar_super.php'; ?>
 
-    <main class="super-main-wrapper class-main-content">
+    <main class="super-main-wrapper">
         
         <header class="master-banner">
             <div>
-                <h2>Otoritas Super Administrator</h2>
-                <p style="font-size: 14px; color: #94a3b8; margin-top: 4px;">Gerbang pemantauan enkripsi database dan manajemen keamanan tingkat tinggi.</p>
+                <h2>Otoritas Daftar Akun Jaringan</h2>
+                <p style="font-size: 14px; color: #94a3b8; margin-top: 4px;">Pusat kendali untuk memonitor, menyaring, dan membatasi akses staff portal.</p>
             </div>
             <div class="master-control-badge">
-                <i class="fa-solid fa-crown"></i> SUPER SYSTEM ACTIVATED
+                <i class="fa-solid fa-users-viewfinder"></i> USER DIRECTORY
             </div>
         </header>
 
-        <section class="stat-row">
-            <div class="stat-box">
-                <div class="stat-info"><h5>Super Admin</h5><h2><?= $count_super ?></h2></div>
-                <div class="stat-icon icon-purple"><i class="fa-solid fa-crown"></i></div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-info"><h5>Administrator</h5><h2><?= $count_admin ?></h2></div>
-                <div class="stat-icon icon-red"><i class="fa-solid fa-user-shield"></i></div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-info"><h5>Penulis / Users</h5><h2><?= $count_users ?></h2></div>
-                <div class="stat-icon icon-blue"><i class="fa-solid fa-users"></i></div>
-            </div>
-        </section>
-
         <?php if (!empty($error)): ?>
-            <div class="toast-msg toast-err"><i class="fa-solid fa-circle-exclamation"></i> <?= htmlspecialchars($error) ?></div>
+            <div class="toast-msg toast-err"><i class="fa-solid fa-shield-halved"></i> <?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
 
         <?php if (!empty($success)): ?>
             <div class="toast-msg toast-succ"><i class="fa-solid fa-circle-check"></i> <?= htmlspecialchars($success) ?></div>
         <?php endif; ?>
 
-        <div class="master-grid">
-            
-            <div class="panel-card">
-                <div class="panel-title"><i class="fa-solid fa-user-shield" style="color:#7c3aed;"></i> Daftarkan Otoritas Akun</div>
-                <form action="" method="POST">
-                    <div class="input-block">
-                        <label>Nama Pengguna (Username)</label>
-                        <input type="text" name="username" class="field-box" placeholder="Cth: almer_dev" required autocomplete="off">
-                    </div>
-                    <div class="input-block">
-                        <label>Email Resmi Pengguna</label>
-                        <input type="email" name="email" class="field-box" placeholder="Cth: almer@domain.com" required autocomplete="off">
-                    </div>
-                    <div class="input-block">
-                        <label>Kata Sandi Kuat (Password)</label>
-                        <input type="password" name="password" class="field-box" placeholder="Kombinasi huruf, angka, simbol" required>
-                    </div>
-                    <div class="input-block">
-                        <label>Derajat Tingkatan Akses (Role)</label>
-                        <select name="role" class="field-box" required style="font-weight: 600;">
-                            <option value="user">Penulis Standar (User)</option>
-                            <option value="admin">Administrator Sistem (Admin)</option>
-                            <option value="superadmin" style="color: #7c3aed; font-weight: bold;">♛ Super Administrator (Pemilik Penuh)</option>
-                        </select>
-                    </div>
-                    <button type="submit" name="proses_tambah" class="master-btn">
-                        <i class="fa-solid fa-shield-halved"></i> Validasi & Simpan Akun
-                    </button>
-                </form>
-            </div>
+        <div class="filter-panel">
+            <form action="" method="GET" class="filter-grid">
+                <div class="filter-group">
+                    <label>Pencarian Identitas</label>
+                    <input type="text" name="q" class="filter-control" placeholder="Cari username atau email..." value="<?= htmlspecialchars($search_query) ?>">
+                </div>
+                <div class="filter-group">
+                    <label>Filter Derajat Akses</label>
+                    <select name="role" class="filter-control">
+                        <option value="">-- Seluruh Role --</option>
+                        <option value="superadmin" <?= ($filter_role == 'superadmin') ? 'selected' : '' ?>>Super Admin</option>
+                        <option value="admin" <?= ($filter_role == 'admin') ? 'selected' : '' ?>>Administrator</option>
+                        <option value="user" <?= ($filter_role == 'user') ? 'selected' : '' ?>>Penulis Biasa (User)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-filter"><i class="fa-solid fa-magnifying-glass"></i> Filter Akun</button>
+                <a href="?" class="btn-reset"><i class="fa-solid fa-rotate-right"></i> Reset</a>
+            </form>
+        </div>
 
-            <div class="panel-card">
-                <div class="panel-title"><i class="fa-solid fa-users-viewfinder" style="color:#7c3aed;"></i> Database Seluruh Jaringan Pengguna</div>
-                <div style="overflow-x: auto;">
-                    <table class="master-table">
-                        <thead>
-                            <tr>
-                                <th>Kredensial Profil</th>
-                                <th>Tingkat Akses</th>
-                                <th>Tanggal Aktivasi</th>
-                                <th style="text-align: center;">Hapus Otoritas</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach($daftar_pengguna as $usr): ?>
+        <div class="table-panel">
+            <div class="table-header">
+                <div class="table-title">
+                    <i class="fa-solid fa-server" style="color: #7c3aed;"></i> Total <?= number_format($total_data) ?> Akun Terekam
+                </div>
+                <a href="/admin/superadmin/tambah" class="btn-filter" style="height: auto; padding: 10px 18px; border-radius: 6px;"><i class="fa-solid fa-user-plus"></i> Injeksi Akun Baru</a>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="master-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 35%;">Identitas Pengguna</th>
+                            <th style="width: 25%;">Derajat Otoritas</th>
+                            <th style="width: 25%;">Tanggal Bergabung</th>
+                            <th style="width: 15%; text-align: center;">Pemutusan Akses</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if ($total_data > 0): ?>
+                            <?php foreach($daftar_akun as $akun): ?>
                             <tr>
                                 <td>
-                                    <div style="font-weight: 700; color: #0f172a; margin-bottom: 2px;">
-                                        <?= htmlspecialchars($usr['username']) ?>
-                                    </td>
+                                    <div class="user-identity">
+                                        <div class="user-avatar" style="background: <?= ($akun['role'] == 'superadmin') ? '#c084fc' : (($akun['role'] == 'admin') ? '#fca5a5' : '#7dd3fc') ?>">
+                                            <?= strtoupper(substr($akun['username'], 0, 1)) ?>
+                                        </div>
+                                        <div>
+                                            <div class="user-name"><?= htmlspecialchars($akun['username']) ?> 
+                                                <?= ($akun['id'] == $_SESSION['admin_id']) ? '<span style="color:#10b981; font-size:11px; margin-left:5px;">(Anda)</span>' : '' ?>
+                                            </div>
+                                            <div class="user-email"><?= htmlspecialchars($akun['email']) ?></div>
+                                        </div>
+                                    </div>
+                                </td>
                                 <td>
                                     <?php 
-                                        $style_badge = 'tag-user';
-                                        if ($usr['role'] == 'superadmin') $style_badge = 'tag-super';
-                                        elseif ($usr['role'] == 'admin') $style_badge = 'tag-admin';
+                                        if($akun['role'] === 'superadmin') {
+                                            echo '<span class="badge-role badge-super"><i class="fa-solid fa-crown"></i> Super Admin</span>';
+                                        } elseif($akun['role'] === 'admin') {
+                                            echo '<span class="badge-role badge-admin"><i class="fa-solid fa-user-gear"></i> Administrator</span>';
+                                        } else {
+                                            echo '<span class="badge-role badge-user"><i class="fa-solid fa-pen-nib"></i> Penulis Biasa</span>';
+                                        }
                                     ?>
-                                    <span class="tag-role <?= $style_badge ?>">
-                                        <?php if($usr['role'] == 'superadmin') echo '<i class="fa-solid fa-crown" style="margin-right:3px;"></i>'; ?>
-                                        <?= htmlspecialchars($usr['role']) ?>
-                                    </span>
                                 </td>
-                                <td style="color: #64748b; font-size: 13px;">
-                                    <?= date('d M Y, H:i', strtotime($usr['created_at'])) ?> WIB
+                                <td style="color: #64748b; font-size: 13px; font-weight: 500;">
+                                    <i class="fa-regular fa-calendar" style="margin-right: 5px;"></i> <?= date('d F Y', strtotime($akun['created_at'])) ?>
                                 </td>
                                 <td style="text-align: center;">
-                                    <?php if($usr['id'] == $_SESSION['admin_id']): ?>
-                                        <span style="font-size: 11px; font-weight: 700; color: #059669; background: #d1fae5; padding: 5px 10px; border-radius: 6px; border: 1px solid #a7f3d0;"><i class="fa-solid fa-user-check"></i> AKTIF</span>
+                                    <?php if ($akun['id'] == $_SESSION['admin_id']): ?>
+                                        <button type="button" class="btn-act disabled" title="Tidak dapat menghapus diri sendiri"><i class="fa-solid fa-lock"></i></button>
                                     <?php else: ?>
-                                        <a href="#" class="trash-circle-btn" title="Hapus Permanen" onclick="konfirmasiHapus(<?= $usr['id'] ?>, '<?= htmlspecialchars($usr['username']) ?>')"><i class="fa-solid fa-trash-can"></i></a>
+                                        <button type="button" class="btn-act delete" title="Musnahkan Akun" onclick="konfirmasiHapus(<?= $akun['id'] ?>, '<?= htmlspecialchars(addslashes($akun['username'])) ?>')"><i class="fa-solid fa-trash-can"></i></button>
                                     <?php endif; ?>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: #94a3b8; padding: 40px;">
+                                    <i class="fa-solid fa-users-slash" style="font-size: 40px; margin-bottom: 10px; color: #e2e8f0; display:block;"></i>
+                                    Tidak ada data pengguna yang cocok dengan filter.
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
             </div>
-
         </div>
+
     </main>
 
     <script>
-    function konfirmasiHapus(id, nama) {
+    // Konfirmasi Hapus Menggunakan SweetAlert2
+    function konfirmasiHapus(id, username) {
         Swal.fire({
-            title: 'Hapus Akun Secara Permanen?',
-            text: "Pengguna '" + nama + "' akan dimusnahkan secara permanen dari server.",
+            title: 'Musnahkan Identitas?',
+            html: `Akun <b>${username}</b> akan dihapus secara permanen dan tidak dapat login kembali.`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
+            confirmButtonColor: '#ef4444',
             cancelButtonColor: '#1e293b',
-            confirmButtonText: 'Ya, Eksekusi!',
+            confirmButtonText: '<i class="fa-solid fa-ban"></i> Ya, Cabut Akses!',
             cancelButtonText: 'Batal',
             reverseButtons: true
         }).then((result) => {
             if (result.isConfirmed) {
-                // Alihkan ke URL hapus jika dikonfirmasi Ya
-                window.location.href = '?superadmin&hapus_id=' + id;
+                // Mempertahankan filter URL saat penghapusan
+                const urlParams = new URLSearchParams(window.location.search);
+                urlParams.set('hapus', id);
+                window.location.href = '?' + urlParams.toString();
             }
         });
     }
